@@ -1,0 +1,17 @@
+# Datos personales que nunca deben acabar en el repo
+memory/
+memory-backup-*/
+*.zip
+
+# Editores y SO
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs y temporales
+*.log
+*.tmp
+.cache/

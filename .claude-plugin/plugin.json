@@ -1,0 +1,47 @@
+{
+  "name": "aimax-memory",
+  "version": "0.1.0",
+  "description": "Memoria persistente universal para Claude Code. Tu asistente te conoce mejor cada sesión sin gastar tokens innecesarios. Inspirado en Engram, abierto a cualquier uso (no sólo programación).",
+  "author": {
+    "name": "AIMAX Agency",
+    "url": "https://github.com/davidhermosogrowthpartner-droid/aimax-memory"
+  },
+  "license": "MIT",
+  "keywords": ["memory", "persistence", "claude-code", "productivity"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PLUGIN_ROOT/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PLUGIN_ROOT/hooks/user-prompt-submit.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PLUGIN_ROOT/hooks/stop.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

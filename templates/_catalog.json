@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "system": "aimax-memory",
+  "createdAt": null,
+  "lastReviewed": null,
+  "types": {
+    "user": { "folder": "user", "reviewMonths": 12 },
+    "feedback": { "folder": "feedback", "reviewMonths": 6 },
+    "project": { "folder": "project", "reviewMonths": 3 },
+    "preference": { "folder": "preference", "reviewMonths": 3 },
+    "learning": { "folder": "learning", "reviewMonths": 6 },
+    "decision": { "folder": "decision", "reviewMonths": 6 },
+    "reference": { "folder": "reference", "reviewMonths": 12 }
+  },
+  "counters": {
+    "totalEntries": 0,
+    "lastSessionTurns": 0,
+    "lastSaveAt": null
+  }
+}
