@@ -23,9 +23,9 @@ CONTEXT=""
 if [ -f "${INDEX_FILE}" ]; then
   INDEX_CONTENT="$(cat "${INDEX_FILE}" 2>/dev/null)"
   if [ -n "${INDEX_CONTENT}" ]; then
-    CONTEXT="${CONTEXT}<aimax-memory-memory-index>
+    CONTEXT="${CONTEXT}<aimax-memory-index>
 ${INDEX_CONTENT}
-</aimax-memory-memory-index>
+</aimax-memory-index>
 
 "
   fi

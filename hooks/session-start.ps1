@@ -20,7 +20,7 @@ $parts = @()
 if (Test-Path $IndexFile) {
     $indexContent = Get-Content -Path $IndexFile -Raw -ErrorAction SilentlyContinue
     if ($indexContent) {
-        $parts += "<aimax-memory-memory-index>`n$indexContent`n</aimax-memory-memory-index>`n"
+        $parts += "<aimax-memory-index>`n$indexContent`n</aimax-memory-index>`n"
     }
 }
 
@@ -53,7 +53,9 @@ if (Test-Path $Catalog) {
         $cat = Get-Content -Path $Catalog -Raw | ConvertFrom-Json
         if ($cat.counters) {
             $cat.counters.lastSessionTurns = 0
-            $cat | ConvertTo-Json -Depth 8 | Set-Content -Path $Catalog -Encoding utf8 -ErrorAction Stop
+            $json = $cat | ConvertTo-Json -Depth 8
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($Catalog, $json, $utf8NoBom)
         }
     } catch { }
 }

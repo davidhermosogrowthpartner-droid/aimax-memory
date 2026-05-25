@@ -112,12 +112,19 @@ hooks = data.setdefault("hooks", {})
 
 def upsert(event, matcher, command, timeout):
     entries = hooks.setdefault(event, [])
-    # Borrar entradas previas de aimax-memory (idempotencia)
-    entries[:] = [e for e in entries if not any(
-        h.get("command", "").endswith(("session-start.sh", "user-prompt-submit.sh", "stop.sh"))
-        and "aimax-memory" in h.get("command", "").lower()
-        for h in e.get("hooks", [])
-    )]
+    # Filtrar SOLO los sub-hooks de aimax-memory de cada bloque, conservando intactos
+    # los hooks de otras herramientas (Sinapsis, sonidos, etc.) que vivan en el mismo bloque.
+    # Si tras filtrar un bloque se queda sin sub-hooks, se descarta entero.
+    new_entries = []
+    for entry in entries:
+        sub_hooks = entry.get("hooks") or []
+        kept = [h for h in sub_hooks if "aimax-memory" not in (h.get("command", "") or "").lower()]
+        if kept:
+            new_entry = dict(entry)
+            new_entry["hooks"] = kept
+            new_entries.append(new_entry)
+    entries[:] = new_entries
+
     block = {"hooks": [{"type": "command", "command": command, "timeout": timeout}]}
     if matcher:
         block["matcher"] = matcher

@@ -45,7 +45,8 @@ sessions: 1
 **Turnos:** $turns
 **Estado:** stub (sin curar). Ejecuta ``/memory-status`` para detalles.
 "@
-    Set-Content -Path $summaryFile -Value $body -Encoding utf8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($summaryFile, $body, $utf8NoBom)
 } else {
     $body = @"
 
@@ -54,7 +55,9 @@ sessions: 1
 **Turnos:** $turns
 **Estado:** stub (sin curar). Ejecuta ``/memory-status`` para detalles.
 "@
-    Add-Content -Path $summaryFile -Value $body -Encoding utf8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $existing = [System.IO.File]::ReadAllText($summaryFile, $utf8NoBom)
+    [System.IO.File]::WriteAllText($summaryFile, $existing + $body, $utf8NoBom)
 }
 
 exit 0

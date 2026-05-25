@@ -87,9 +87,44 @@ foreach ($tpl in @('MEMORY.md', 'operator.md', '_catalog.json')) {
 $Settings = Join-Path $ClaudeDir 'settings.json'
 Write-Host "-> Registrando hooks en $Settings"
 
+# Conversión PSCustomObject → Hashtable recursiva (compatible PS 5.1, donde -AsHashtable no existe).
+function ConvertTo-HashtableDeep {
+    param($InputObject)
+    if ($null -eq $InputObject) { return $null }
+    if ($InputObject -is [string] -or $InputObject.GetType().IsPrimitive) { return $InputObject }
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $h = @{}
+        foreach ($k in $InputObject.Keys) { $h[$k] = ConvertTo-HashtableDeep -InputObject $InputObject[$k] }
+        return $h
+    }
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+        $h = @{}
+        foreach ($p in $InputObject.PSObject.Properties) { $h[$p.Name] = ConvertTo-HashtableDeep -InputObject $p.Value }
+        return $h
+    }
+    if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+        $list = New-Object System.Collections.ArrayList
+        foreach ($item in $InputObject) { [void]$list.Add((ConvertTo-HashtableDeep -InputObject $item)) }
+        return ,$list.ToArray()
+    }
+    return $InputObject
+}
+
+# Escritura UTF-8 SIN BOM (PS 5.1 mete BOM con Set-Content -Encoding utf8).
+function Write-Utf8NoBom {
+    param([string]$Path, [string]$Content)
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
 if (Test-Path $Settings) {
-    $data = Get-Content -Path $Settings -Raw | ConvertFrom-Json -AsHashtable
-    if (-not $data) { $data = @{} }
+    $raw = Get-Content -Path $Settings -Raw
+    if ($raw -and $raw.Trim()) {
+        $parsed = $raw | ConvertFrom-Json
+        $data = ConvertTo-HashtableDeep -InputObject $parsed
+    } else {
+        $data = @{}
+    }
 } else {
     $data = @{}
 }
@@ -102,22 +137,31 @@ function Upsert-Hook {
 
     if (-not $hooks.ContainsKey($Event)) { $hooks[$Event] = @() }
 
-    # Filtrar entradas previas de aimax-memory
-    $filtered = @()
+    # Filtrar SOLO los sub-hooks de aimax-memory de cada bloque, conservando intactos
+    # los hooks de otras herramientas (Sinapsis, sonidos, etc.) que vivan en el mismo bloque.
+    # Si tras filtrar un bloque se queda sin sub-hooks, se descarta entero.
+    $filtered = New-Object System.Collections.ArrayList
     foreach ($entry in $hooks[$Event]) {
-        $isAimax = $false
-        if ($entry.hooks) {
-            foreach ($h in $entry.hooks) {
-                if ($h.command -and $h.command -match 'aimax-memory.*\.ps1$') { $isAimax = $true; break }
+        if (-not $entry) { continue }
+        $subKept = New-Object System.Collections.ArrayList
+        if ($entry.ContainsKey('hooks') -and $entry['hooks']) {
+            foreach ($h in $entry['hooks']) {
+                $cmd = if ($h -and $h.ContainsKey('command')) { [string]$h['command'] } else { '' }
+                if (-not ($cmd -match 'aimax-memory')) { [void]$subKept.Add($h) }
             }
         }
-        if (-not $isAimax) { $filtered += $entry }
+        if ($subKept.Count -gt 0) {
+            $newEntry = @{}
+            foreach ($k in $entry.Keys) { $newEntry[$k] = $entry[$k] }
+            $newEntry['hooks'] = $subKept.ToArray()
+            [void]$filtered.Add($newEntry)
+        }
     }
 
     $block = @{ hooks = @(@{ type = 'command'; command = $Command; timeout = $Timeout }) }
     if ($Matcher) { $block['matcher'] = $Matcher }
-    $filtered += $block
-    $hooks[$Event] = $filtered
+    [void]$filtered.Add($block)
+    $hooks[$Event] = $filtered.ToArray()
 }
 
 $hooksRoot = Join-Path $AimaxDir 'hooks'
@@ -125,7 +169,8 @@ Upsert-Hook 'SessionStart' 'startup|clear|compact' "powershell -ExecutionPolicy 
 Upsert-Hook 'UserPromptSubmit' '' "powershell -ExecutionPolicy Bypass -File `"$(Join-Path $hooksRoot 'user-prompt-submit.ps1')`"" 2
 Upsert-Hook 'Stop' '' "powershell -ExecutionPolicy Bypass -File `"$(Join-Path $hooksRoot 'stop.ps1')`"" 5
 
-$data | ConvertTo-Json -Depth 12 | Set-Content -Path $Settings -Encoding utf8
+$json = $data | ConvertTo-Json -Depth 12
+Write-Utf8NoBom -Path $Settings -Content $json
 Write-Host "   Hooks registrados."
 
 Write-Host ""

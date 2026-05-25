@@ -24,7 +24,9 @@ try {
     if ($turns -ge $NudgeThreshold -and ($turns % $NudgeThreshold) -eq 0) {
         $shouldNudge = $true
     }
-    $cat | ConvertTo-Json -Depth 8 | Set-Content -Path $Catalog -Encoding utf8
+    $json = $cat | ConvertTo-Json -Depth 8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Catalog, $json, $utf8NoBom)
 } catch {
     '{}' | Write-Output
     exit 0
