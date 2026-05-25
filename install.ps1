@@ -6,7 +6,7 @@
 $ErrorActionPreference = 'Stop'
 
 $ClaudeDir = Join-Path $env:USERPROFILE '.claude'
-$AIMAX MemoryDir = Join-Path $ClaudeDir 'aimax-memory'
+$AimaxDir = Join-Path $ClaudeDir 'aimax-memory'
 $MemoryDir = Join-Path $ClaudeDir 'memory'
 $ScriptDir = $PSScriptRoot
 
@@ -21,14 +21,14 @@ if (-not (Test-Path $ClaudeDir)) {
 }
 
 # 1. Copiar el repo a ~/.claude/aimax-memory/
-Write-Host "-> Copiando archivos de AIMAX Memory a $AIMAX MemoryDir"
-if (-not (Test-Path $AIMAX MemoryDir)) {
-    New-Item -ItemType Directory -Path $AIMAX MemoryDir -Force | Out-Null
+Write-Host "-> Copiando archivos de AIMAX Memory a $AimaxDir"
+if (-not (Test-Path $AimaxDir)) {
+    New-Item -ItemType Directory -Path $AimaxDir -Force | Out-Null
 }
 foreach ($d in @('skills', 'agents', 'commands', 'hooks', '.claude-plugin', 'templates', 'docs')) {
     $src = Join-Path $ScriptDir $d
     if (Test-Path $src) {
-        $dst = Join-Path $AIMAX MemoryDir $d
+        $dst = Join-Path $AimaxDir $d
         if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
         Copy-Item -Recurse -Path $src -Destination $dst
     }
@@ -56,13 +56,13 @@ function Link-OrCopy {
     }
 }
 
-Get-ChildItem -Path (Join-Path $AIMAX MemoryDir 'skills') -Directory | ForEach-Object {
+Get-ChildItem -Path (Join-Path $AimaxDir 'skills') -Directory | ForEach-Object {
     Link-OrCopy -Src $_.FullName -Dst (Join-Path $ClaudeDir "skills\$($_.Name)")
 }
-Get-ChildItem -Path (Join-Path $AIMAX MemoryDir 'commands') -Filter '*.md' | ForEach-Object {
+Get-ChildItem -Path (Join-Path $AimaxDir 'commands') -Filter '*.md' | ForEach-Object {
     Link-OrCopy -Src $_.FullName -Dst (Join-Path $ClaudeDir "commands\$($_.Name)")
 }
-Get-ChildItem -Path (Join-Path $AIMAX MemoryDir 'agents') -Filter '*.md' | ForEach-Object {
+Get-ChildItem -Path (Join-Path $AimaxDir 'agents') -Filter '*.md' | ForEach-Object {
     Link-OrCopy -Src $_.FullName -Dst (Join-Path $ClaudeDir "agents\$($_.Name)")
 }
 
@@ -77,7 +77,7 @@ foreach ($sub in @('user', 'feedback', 'project', 'preference', 'learning', 'dec
 # Plantillas sólo si no existen
 foreach ($tpl in @('MEMORY.md', 'operator.md', '_catalog.json')) {
     $dst = Join-Path $MemoryDir $tpl
-    $src = Join-Path $AIMAX MemoryDir "templates\$tpl"
+    $src = Join-Path $AimaxDir "templates\$tpl"
     if (-not (Test-Path $dst) -and (Test-Path $src)) {
         Copy-Item -Path $src -Destination $dst
     }
@@ -105,13 +105,13 @@ function Upsert-Hook {
     # Filtrar entradas previas de aimax-memory
     $filtered = @()
     foreach ($entry in $hooks[$Event]) {
-        $isAIMAX Memory = $false
+        $isAimax = $false
         if ($entry.hooks) {
             foreach ($h in $entry.hooks) {
-                if ($h.command -and $h.command -match 'aimax-memory.*\.ps1$') { $isAIMAX Memory = $true; break }
+                if ($h.command -and $h.command -match 'aimax-memory.*\.ps1$') { $isAimax = $true; break }
             }
         }
-        if (-not $isAIMAX Memory) { $filtered += $entry }
+        if (-not $isAimax) { $filtered += $entry }
     }
 
     $block = @{ hooks = @(@{ type = 'command'; command = $Command; timeout = $Timeout }) }
@@ -120,7 +120,7 @@ function Upsert-Hook {
     $hooks[$Event] = $filtered
 }
 
-$hooksRoot = Join-Path $AIMAX MemoryDir 'hooks'
+$hooksRoot = Join-Path $AimaxDir 'hooks'
 Upsert-Hook 'SessionStart' 'startup|clear|compact' "powershell -ExecutionPolicy Bypass -File `"$(Join-Path $hooksRoot 'session-start.ps1')`"" 10
 Upsert-Hook 'UserPromptSubmit' '' "powershell -ExecutionPolicy Bypass -File `"$(Join-Path $hooksRoot 'user-prompt-submit.ps1')`"" 2
 Upsert-Hook 'Stop' '' "powershell -ExecutionPolicy Bypass -File `"$(Join-Path $hooksRoot 'stop.ps1')`"" 5

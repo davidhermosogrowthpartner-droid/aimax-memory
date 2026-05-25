@@ -6,7 +6,7 @@
 set -e
 
 CLAUDE_DIR="${HOME}/.claude"
-CORTEX_DIR="${CLAUDE_DIR}/aimax-memory"
+AIMAX_DIR="${CLAUDE_DIR}/aimax-memory"
 MEMORY_DIR="${CLAUDE_DIR}/memory"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,18 +23,18 @@ if [ ! -d "${CLAUDE_DIR}" ]; then
 fi
 
 # 2. Copiar el repo a ~/.claude/aimax-memory/ (no symlinks: más portable, evita problemas en Windows)
-echo "→ Copiando archivos de AIMAX Memory a ${CORTEX_DIR}"
-mkdir -p "${CORTEX_DIR}"
+echo "→ Copiando archivos de AIMAX Memory a ${AIMAX_DIR}"
+mkdir -p "${AIMAX_DIR}"
 for d in skills agents commands hooks .claude-plugin templates docs; do
   if [ -d "${SCRIPT_DIR}/${d}" ]; then
-    rm -rf "${CORTEX_DIR}/${d}"
-    cp -R "${SCRIPT_DIR}/${d}" "${CORTEX_DIR}/${d}"
+    rm -rf "${AIMAX_DIR}/${d}"
+    cp -R "${SCRIPT_DIR}/${d}" "${AIMAX_DIR}/${d}"
   fi
 done
 
 # 3. Asegurar permisos de ejecución en hooks shell
-if [ -d "${CORTEX_DIR}/hooks" ]; then
-  chmod +x "${CORTEX_DIR}/hooks/"*.sh 2>/dev/null || true
+if [ -d "${AIMAX_DIR}/hooks" ]; then
+  chmod +x "${AIMAX_DIR}/hooks/"*.sh 2>/dev/null || true
 fi
 
 # 4. Enlazar skills/commands/agents al ~/.claude/ global para que Claude Code los descubra
@@ -51,19 +51,19 @@ link_or_copy() {
   cp -R "${src}" "${dst}"
 }
 
-for skill_dir in "${CORTEX_DIR}/skills/"*/; do
+for skill_dir in "${AIMAX_DIR}/skills/"*/; do
   [ -d "${skill_dir}" ] || continue
   name="$(basename "${skill_dir}")"
   link_or_copy "${skill_dir%/}" "${CLAUDE_DIR}/skills/${name}"
 done
 
-for cmd_file in "${CORTEX_DIR}/commands/"*.md; do
+for cmd_file in "${AIMAX_DIR}/commands/"*.md; do
   [ -f "${cmd_file}" ] || continue
   name="$(basename "${cmd_file}")"
   link_or_copy "${cmd_file}" "${CLAUDE_DIR}/commands/${name}"
 done
 
-for agent_file in "${CORTEX_DIR}/agents/"*.md; do
+for agent_file in "${AIMAX_DIR}/agents/"*.md; do
   [ -f "${agent_file}" ] || continue
   name="$(basename "${agent_file}")"
   link_or_copy "${agent_file}" "${CLAUDE_DIR}/agents/${name}"
@@ -78,8 +78,8 @@ done
 
 # Copiar plantillas sólo si no existen ya
 for tpl in MEMORY.md operator.md _catalog.json; do
-  if [ ! -f "${MEMORY_DIR}/${tpl}" ] && [ -f "${CORTEX_DIR}/templates/${tpl}" ]; then
-    cp "${CORTEX_DIR}/templates/${tpl}" "${MEMORY_DIR}/${tpl}"
+  if [ ! -f "${MEMORY_DIR}/${tpl}" ] && [ -f "${AIMAX_DIR}/templates/${tpl}" ]; then
+    cp "${AIMAX_DIR}/templates/${tpl}" "${MEMORY_DIR}/${tpl}"
   fi
 done
 
@@ -89,10 +89,18 @@ echo "→ Registrando hooks en ${SETTINGS}"
 
 if command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
   PY=$(command -v python3 || command -v python)
-  "${PY}" - <<PYEOF "${SETTINGS}" "${CORTEX_DIR}"
-import json, os, sys
-path, aimax-memory_dir = sys.argv[1], sys.argv[2]
-hooks_root = os.path.join(aimax-memory_dir, "hooks")
+  "${PY}" - <<PYEOF "${SETTINGS}" "${AIMAX_DIR}"
+import json, os, re, sys
+
+def winpath(p):
+    """Convierte /c/foo/bar (Git Bash) a C:/foo/bar (Windows-compatible)."""
+    if sys.platform.startswith("win") and re.match(r"^/[a-zA-Z]/", p):
+        return p[1].upper() + ":" + p[2:]
+    return p
+
+path = winpath(sys.argv[1])
+aimax_dir = winpath(sys.argv[2])
+hooks_root = os.path.join(aimax_dir, "hooks")
 
 if os.path.exists(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -115,9 +123,14 @@ def upsert(event, matcher, command, timeout):
         block["matcher"] = matcher
     entries.append(block)
 
-upsert("SessionStart", "startup|clear|compact", os.path.join(hooks_root, "session-start.sh"), 10)
-upsert("UserPromptSubmit", None, os.path.join(hooks_root, "user-prompt-submit.sh"), 2)
-upsert("Stop", None, os.path.join(hooks_root, "stop.sh"), 5)
+# En Windows, prefijamos 'bash' como hace Sinapsis: los .sh no se ejecutan directamente.
+# Usamos rutas con ~ para portabilidad (bash las expande).
+HOOK_PREFIX = "bash " if sys.platform.startswith("win") else ""
+SHORT_HOOKS = "~/.claude/aimax-memory/hooks"
+
+upsert("SessionStart", "startup|clear|compact", f"{HOOK_PREFIX}{SHORT_HOOKS}/session-start.sh", 10)
+upsert("UserPromptSubmit", None, f"{HOOK_PREFIX}{SHORT_HOOKS}/user-prompt-submit.sh", 2)
+upsert("Stop", None, f"{HOOK_PREFIX}{SHORT_HOOKS}/stop.sh", 5)
 
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
