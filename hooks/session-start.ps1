@@ -18,7 +18,7 @@ $parts = @()
 
 # 1. Índice maestro
 if (Test-Path $IndexFile) {
-    $indexContent = Get-Content -Path $IndexFile -Raw -ErrorAction SilentlyContinue
+    $indexContent = Get-Content -Path $IndexFile -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
     if ($indexContent) {
         $parts += "<aimax-memory-index>`n$indexContent`n</aimax-memory-index>`n"
     }
@@ -26,7 +26,7 @@ if (Test-Path $IndexFile) {
 
 # 2. Perfil del operador
 if (Test-Path $OperatorFile) {
-    $opContent = Get-Content -Path $OperatorFile -Raw -ErrorAction SilentlyContinue
+    $opContent = Get-Content -Path $OperatorFile -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
     if ($opContent) {
         $parts += "<aimax-memory-operator-profile>`n$opContent`n</aimax-memory-operator-profile>`n"
     }
@@ -39,7 +39,7 @@ if (Test-Path $SummariesDir) {
               Sort-Object Name |
               Select-Object -Last 1
     if ($latest) {
-        $sumContent = Get-Content -Path $latest.FullName -Raw -ErrorAction SilentlyContinue
+        $sumContent = Get-Content -Path $latest.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
         if ($sumContent) {
             $parts += "<aimax-memory-last-session-summary file=`"$($latest.Name)`">`n$sumContent`n</aimax-memory-last-session-summary>`n"
         }
@@ -50,7 +50,7 @@ if (Test-Path $SummariesDir) {
 $Catalog = Join-Path $MemoryDir '_catalog.json'
 if (Test-Path $Catalog) {
     try {
-        $cat = Get-Content -Path $Catalog -Raw | ConvertFrom-Json
+        $cat = Get-Content -Path $Catalog -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($cat.counters) {
             $cat.counters.lastSessionTurns = 0
             $json = $cat | ConvertTo-Json -Depth 8

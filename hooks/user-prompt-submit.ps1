@@ -15,7 +15,7 @@ if (-not (Test-Path $MemoryDir) -or -not (Test-Path $Catalog)) {
 
 $shouldNudge = $false
 try {
-    $cat = Get-Content -Path $Catalog -Raw | ConvertFrom-Json
+    $cat = Get-Content -Path $Catalog -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $cat.counters) {
         $cat | Add-Member -NotePropertyName counters -NotePropertyValue ([pscustomobject]@{ lastSessionTurns = 0 }) -Force
     }

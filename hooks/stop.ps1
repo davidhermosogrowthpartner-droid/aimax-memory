@@ -14,7 +14,7 @@ if (-not (Test-Path $MemoryDir)) { exit 0 }
 $turns = 0
 if (Test-Path $Catalog) {
     try {
-        $cat = Get-Content -Path $Catalog -Raw | ConvertFrom-Json
+        $cat = Get-Content -Path $Catalog -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($cat.counters -and $cat.counters.lastSessionTurns) {
             $turns = [int]$cat.counters.lastSessionTurns
         }
