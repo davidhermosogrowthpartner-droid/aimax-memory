@@ -22,7 +22,22 @@ AIMAX Memory se basa en tres ideas:
 
 ## Instalación en 2 minutos
 
-### Opción A — Plugin de Claude Code (recomendado)
+Elige el camino según tu sistema:
+
+| Tu sistema | Camino recomendado |
+|---|---|
+| **Mac** | Opción A (plugin) |
+| **Linux** | Opción A (plugin) |
+| **Windows con WSL instalado** | Opción A (plugin) |
+| **Windows sin WSL** | **Opción B (script `install.ps1`)** |
+
+> ⚠️ **Importante para usuarios de Windows:** si **no** tienes WSL instalado, **no uses la Opción A**. Los hooks del plugin necesitan un intérprete tipo Unix para ejecutarse, y sin WSL Claude Code te mostrará un error de "JSON inválido" al escribirle. Ve directamente a la **Opción B** con `install.ps1` — está pensada exactamente para este caso y registra hooks nativos de PowerShell que no requieren WSL.
+>
+> ¿No sabes si tienes WSL? Abre PowerShell y ejecuta `wsl --status`. Si te dice que falta el componente o no reconoce el comando, **no tienes WSL** → Opción B.
+
+### Opción A — Plugin de Claude Code
+
+Para Mac, Linux y Windows con WSL.
 
 ```
 /plugin marketplace add github:davidhermosogrowthpartner-droid/aimax-memory
@@ -41,12 +56,18 @@ cd aimax-memory
 ./install.sh
 ```
 
-**Windows PowerShell:**
+**Windows PowerShell (recomendado si no tienes WSL):**
 
 ```powershell
 git clone https://github.com/davidhermosogrowthpartner-droid/aimax-memory.git
 cd aimax-memory
 .\install.ps1
+```
+
+Si PowerShell te bloquea la ejecución del script, abre PowerShell **como administrador** y ejecuta primero:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
 El instalador es idempotente y no machaca datos existentes. Puedes ejecutarlo de nuevo para actualizar.
