@@ -1,6 +1,7 @@
 # Datos personales que nunca deben acabar en el repo
-memory/
-memory-backup-*/
+# (ancladas a la raíz para no pisar skills/memory/)
+/memory/
+/memory-backup-*/
 *.zip
 
 # Editores y SO
